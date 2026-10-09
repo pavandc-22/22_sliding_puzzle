@@ -31,6 +31,7 @@ class SlidingPuzzle:
         print("Moves:", self.moves, " Time:", self.elapsed_time(), "s")
 
     def _finish(self):
+        # Make victory feedback idempotent: announce it only once.
         if not self.won:
             self.won = True
             self.finished_at = time.monotonic()
@@ -47,7 +48,7 @@ class SlidingPuzzle:
             "W/A/S/D moves the tile into the blank. Q quits."
         )
 
-        # Handle a board that is already solved before requesting input.
+        # Preserve Task 2 behavior for a board already solved before input.
         if self.puzzle.solved():
             self._finish()
             return
@@ -62,12 +63,17 @@ class SlidingPuzzle:
                 print("Use W/A/S/D.")
                 continue
 
-            if self.puzzle.move(key):
-                self.moves += 1
+            # A move is successful only when the board actually changes.
+            moved = self.puzzle.move(key)
 
-                # Check immediately after every successful movement.
-                if self.puzzle.solved():
-                    self._finish()
-                    return
-            else:
+            if not moved:
                 print("That move is not possible.")
+                continue
+
+            # Only successful moves reach this point.
+            self.moves += 1
+
+            # Check for victory only after a successful movement.
+            if self.puzzle.solved():
+                self._finish()
+                return
