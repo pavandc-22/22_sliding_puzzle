@@ -4,57 +4,70 @@ from puzzle import Puzzle
 
 
 class SlidingPuzzle:
-    def __init__(self):
-        self.size = 4
+    def __init__(self, size=4):
+        if size not in (3, 4, 5):
+            raise ValueError("Puzzle size must be 3, 4, or 5.")
+
+        self.size = size
         self.puzzle = Puzzle(self.size)
         self.moves = 0
         self.started = time.monotonic()
         self.won = False
+        self.finished_at = None
+
+    def elapsed_time(self):
+        """Return elapsed seconds, frozen when the game is won."""
+        end_time = (
+            self.finished_at
+            if self.finished_at is not None
+            else time.monotonic()
+        )
+        return int(end_time - self.started)
 
     def display(self):
         print()
         for row in self.puzzle.board:
             print(" ".join(f"{x or ' ':>2}" for x in row))
-        print(
-            "Moves:", self.moves,
-            " Time:", int(time.monotonic() - self.started), "s"
-        )
+        print("Moves:", self.moves, " Time:", self.elapsed_time(), "s")
+
+    def _finish(self):
+        if not self.won:
+            self.won = True
+            self.finished_at = time.monotonic()
+            self.display()
+            print("Congratulations! You solved the puzzle!")
 
     def run(self):
-        # Prevent restarting a game that has already been won.
+        # A completed game cannot be resumed or announce victory again.
         if self.won:
             return
 
         print(
-            "Sliding Puzzle — W/A/S/D moves the tile into the blank. Q quits."
+            f"Sliding Puzzle ({self.size}x{self.size}) — "
+            "W/A/S/D moves the tile into the blank. Q quits."
         )
 
-        # Handle a board that is already solved before the first input.
+        # Handle a board that is already solved before requesting input.
         if self.puzzle.solved():
-            self.display()
-            self.won = True
-            print("Congratulations! You solved the puzzle!")
+            self._finish()
             return
 
-        while True:
+        while not self.won:
             self.display()
             key = input("> ").strip().lower()
 
             if key == "q":
                 return
-
-            if key not in "wasd":
+            if key not in {"w", "a", "s", "d"}:
                 print("Use W/A/S/D.")
                 continue
 
             if self.puzzle.move(key):
                 self.moves += 1
 
-                # Check immediately after every successful move.
+                # Check immediately after every successful movement.
                 if self.puzzle.solved():
-                    self.display()
-                    self.won = True
-                    print("Congratulations! You solved the puzzle!")
+                    self._finish()
                     return
             else:
                 print("That move is not possible.")
